@@ -93,7 +93,7 @@ usa3$MAKE <- factor(usa3$MAKE, levels = c(12, 20, 37, 49), labels = c("Ford", "C
 q4_map <- states %>% group_by(region)
 q4_map %>% ggplot(aes(x = long, y = lat)) + 
          geom_polygon(aes(group = group)) +
-         geom_text(aes(label = MAKE), color = 'white', size = 3, data = usa3)
+         geom_text(aes(label = MAKE), color = 'white', size = 3, data = usa3) + coord_map()
 ```
 
 My definition of a vehicle being dangerous was the same from question 3. I said that a dangerous vehicle is represented by the number of people fatally hit and more, so I just used the same data that came out of q3 for this question as well. Out of the 24 states that we can find the dangerous MAKE for, most of them seem to be from Chevrolet. Other dangerous vehicles come from Ford, Honda and Toyota. Another thing that I've found is that the midwest/south seems to have the most accidents from Chevrolet.
@@ -143,7 +143,7 @@ deaths <- deaths %>%
          
 deaths %>% left_join(counties, by = c("County Name" = "subregion")) %>%
          ggplot(aes(x = long, y = lat, fill = Deaths)) +
-         geom_polygon(aes(group = group))
+         geom_polygon(aes(group = group)) + coord_map()
 ```
 
 Say something here
@@ -178,24 +178,6 @@ I measured the months being dangerous by how many fatalities there were. FATALS 
 summerMonths <- summerMonths %>% select(STATE, MONTH, FATALS)
 winterMonths <- winterMonths %>% select(STATE, MONTH, FATALS)
 
-
-##### keeps giving me cannot allocate vector error
-#Summer
-#monthsS <- summerMonths %>% left_join(usa, by = c("STATE" = "State Code")) %>%
-#         select(STATE, `State Name`, FATALS) %>%
-#         unique()
-
-#monthsS <- monthsS %>% left_join(states, by = c("State Name" = "region"))
-
-#Winter
-#monthsW <- winterMonths %>% left_join(usa, by = c("STATE" = "State Code")) %>%
-#         select(STATE, `State Name`, FATALS) %>%
-#         unique()
-
-#monthsW <- monthsW %>% left_join(states, by = c("State Name" = "region"))
-#####
-
-
 #States in Summer
 summerStates <- summerMonths %>%
          group_by(STATE) %>%
@@ -213,9 +195,11 @@ acc <- left_join(summerMonths, winterMonths, by = c("STATE" = "STATE"))
 acc_summer <- acc %>% group_by(STATE) %>% 
          summarise(accidents = sum(FATALS.x) - sum(FATALS.y)) %>%
          arrange(desc(accidents))
+head(acc_summer, n = 10)
 
 acc_winter <- acc %>% group_by(STATE) %>% 
          summarise(accidents = sum(FATALS.y) - sum(FATALS.x)) %>%
          arrange(desc(accidents))
+head(acc_winter, n = 10)
 ```
 
