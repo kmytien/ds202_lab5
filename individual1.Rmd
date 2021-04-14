@@ -36,7 +36,7 @@ ggplot(q1, aes(x = DAY_WEEK, y = Accidents)) + geom_bar(stat = 'identity') +
       ggtitle("Day v.s. Total Accidents") + xlab("Day of the Week") + ylab("Number of Accidents")
 ```
 
-Say something here
+Shown here, it seems that the weekend days, Friday, Saturday and Sunday, are the most common days to get in an accident. This could be for many reasons as most people are off work and plan to go out of town, people like to drink on the weekends, and so on.
 
 
 **2. Create a data frame containing the persons who are fatally hurt in the accidents (look up variable INJ_SEV)**
@@ -46,12 +46,12 @@ q2 <- person %>% filter(INJ_SEV == 4)
 head(q2)
 ```
 
-Say something here
+Looking in the FARS manual, I found that a Fatal Injury is represented as the number 4 in "INJ_SEV". With that, I used filter to filter the data so it only shows records of those who had a fatal injury.
 
 
 **3. Create a data frame containing the most dangerous vehicle make in each state. The number of persons fatally hit in the vehicle make is used to assess the (non-)safety of a make. Make sure to handle the missing values appropriately. (look up variable MAKE)**
 ```{r}
-#need one for each state - some states have NA make
+#some states have NA make
 q3 <- person %>%
       filter(INJ_SEV == 4) %>%
       group_by(STATE, MAKE) %>%
@@ -62,7 +62,7 @@ q3 <- drop_na(q3)
 q3
 ```
 
-Say something here
+I decided to drop all null values, which resulted in only showing 24 states. Most states dangerous "MAKE" was null, which is why most aren't here. It looks like the most dangerous MAKE vehicles are represented by the numbers 12, 20, 37 and 49 (the names are in the next question).
 
 
 **4.Create a map, and label each state with the most dangerous vehicle. Discuss the definition of the most dangerous vehicle, and what you find from the map. (Hint: Read the description for the STATE and COUNTY columns in the FARS manual. The state & county codes are Geographic Locator Codes (GLCs) from the General Services Administration’s (GSA) publication. Use readxl::read_xlsx to read in the GLCs.)**
@@ -96,7 +96,7 @@ q4_map %>% ggplot(aes(x = long, y = lat)) +
          geom_text(aes(label = MAKE), color = 'white', size = 3, data = usa3)
 ```
 
-Say something here
+My definition of a vehicle being dangerous was the same from question 3. I said that a dangerous vehicle is represented by the number of people fatally hit and more, so I just used the same data that came out of q3 for this question as well. Out of the 24 states that we can find the dangerous MAKE for, most of them seem to be from Chevrolet. Other dangerous vehicles come from Ford, Honda and Toyota. Another thing that I've found is that the midwest/south seems to have the most accidents from Chevrolet.
 
 
 **5. Join the accident and person table (work out which variable(s) to use)**
@@ -104,28 +104,30 @@ Say something here
 acc_person <- accident %>% left_join(person, by = c("STATE", "COUNTY", "DAY", "MONTH", "HOUR", "MINUTE"))
 ```
 
-Say something here
-
 
 **6. Tally the number of accidents by day of the week (DAY_WEEK), hour of the day (HOUR) and gender (SEX). Visualize the results and explain what you find.**
 ```{r}
-q6 <- acc_person %>%
-         filter(SEX < 3 & HOUR < 24 & DAY_WEEK <= 7) %>%
-         group_by(DAY_WEEK, HOUR, SEX) %>%
-         summarise(Accidents = n())
+acc_person$DAY_WEEK <- factor(acc_person$DAY_WEEK, labels = c("Sun"," Mon", "Tue", "Wed", "Thu", "Fri", "Sat"))
+acc_person$SEX <- factor(acc_person$SEX, levels = c("1", "2"), labels = c("Male", "Female"))
 
-q6$DAY_WEEK <- factor(q6$DAY_WEEK, labels = c("Sun"," Mon", "Tue", "Wed", "Thu", "Fri", "Sat"))
-q6$SEX <- factor(q6$SEX, labels = c("Male", "Female"))
+q6 <- acc_person %>%
+         filter(HOUR < 24) %>%
+         group_by(DAY_WEEK, HOUR, SEX) %>%
+         summarise(Accidents = n()) %>%
+         drop_na()
                  
-q6 %>% ggplot(aes(x = HOUR, y = Accidents, fill = SEX)) + geom_bar(stat = 'identity') + facet_grid(~DAY_WEEK) +
+q6 %>% ggplot(aes(x = HOUR, y = Accidents, fill = SEX)) + geom_bar(stat = 'identity') + facet_wrap(~DAY_WEEK) +
          ggtitle("Accidents by Hour/Week v.s. Sex") + xlab("Hour of Day") + ylab("Number of Accidents")
 ```
 
-Say something here
+I decided to use facet wrap and stacked bar charts to represent all variables needed, Accidents, Hour, and Sex. I made sure to rename the factor labels from numbers to words so the data is more obvious.
+
+From the output, it looks like that many accidents happen during the afternoon and evening. Regarding the day, it looks like Friday and Saturday are pretty high regarding the number of accidents. For the sex, Males seem to be more involved in accidents than Females, overall though, it looks like the involvement in accidents from both genders are pretty close.
 
 
 **7. Now plot a choropleth map of the number of deaths on a county level. Also explain what you find.**
 ```{r}
+#not sure if the output is correct?
 counties <- map_data('county')
 usa <- usa %>% mutate(`County Code` = as.numeric(`County Code`)) %>%
          mutate(`County Name` = tolower(`County Name`))
@@ -138,12 +140,9 @@ deaths <- deaths %>%
          left_join(usa, by = c("COUNTY" = "County Code")) %>%
          select(COUNTY, Deaths, `County Name`) %>%
          unique()
-
-deaths <- deaths %>%
-         left_join(counties, by = c("County Name" = "subregion")) %>%
-         select(-order)
          
-deaths %>% ggplot(aes(x = long, y = lat, fill = Deaths)) +
+deaths %>% left_join(counties, by = c("County Name" = "subregion")) %>%
+         ggplot(aes(x = long, y = lat, fill = Deaths)) +
          geom_polygon(aes(group = group))
 ```
 
@@ -152,8 +151,71 @@ Say something here
 
 **8. Is summer or winter more dangerous? Does this depend on states? Explore and explain.**
 ```{r}
+#Cleaning data up
+acc_person$MONTH <- factor(acc_person$MONTH, labels = c("Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"))
 
+summerMonths <- acc_person %>% filter(MONTH %in% c("Jun", "Jul", "Aug"))
+winterMonths <- acc_person %>% filter(MONTH %in% c("Dec", "Jan", "Feb"))
 ```
 
-Say something here
+```{r}
+#Summer months 6-8
+summer <- summerMonths %>%
+         group_by(MONTH) %>%
+         summarise(Fatalities = sum(FATALS))
+summer
+
+#Winter months 12-2
+winter <- winterMonths %>%
+         group_by(MONTH) %>%
+         summarise(Fatalities = sum(FATALS))
+winter
+```
+
+I measured the months being dangerous by how many fatalities there were. FATALS were taken from the count of people who had INJ_SEV == 4 (according to the FARS manual). Overall, it looks like Summer had more fatalities than Winter, which surprised me since Winter was a bit more slicker. After thinking about it, it made sense that Summer had more since a lot of people had school off and was going out more because of the weather.
+
+```{r}
+summerMonths <- summerMonths %>% select(STATE, MONTH, FATALS)
+winterMonths <- winterMonths %>% select(STATE, MONTH, FATALS)
+
+
+##### keeps giving me cannot allocate vector error
+#Summer
+#monthsS <- summerMonths %>% left_join(usa, by = c("STATE" = "State Code")) %>%
+#         select(STATE, `State Name`, FATALS) %>%
+#         unique()
+
+#monthsS <- monthsS %>% left_join(states, by = c("State Name" = "region"))
+
+#Winter
+#monthsW <- winterMonths %>% left_join(usa, by = c("STATE" = "State Code")) %>%
+#         select(STATE, `State Name`, FATALS) %>%
+#         unique()
+
+#monthsW <- monthsW %>% left_join(states, by = c("State Name" = "region"))
+#####
+
+
+#States in Summer
+summerStates <- summerMonths %>%
+         group_by(STATE) %>%
+         summarise(Fatalities = sum(FATALS)) %>%
+         arrange(desc(Fatalities))
+
+#States in Winter
+winterStates <- winterMonths %>%
+         group_by(STATE) %>%
+         summarise(Fatalities = sum(FATALS)) %>%
+         arrange(desc(Fatalities))
+
+acc <- left_join(summerMonths, winterMonths, by = c("STATE" = "STATE"))
+
+acc_summer <- acc %>% group_by(STATE) %>% 
+         summarise(accidents = sum(FATALS.x) - sum(FATALS.y)) %>%
+         arrange(desc(accidents))
+
+acc_winter <- acc %>% group_by(STATE) %>% 
+         summarise(accidents = sum(FATALS.y) - sum(FATALS.x)) %>%
+         arrange(desc(accidents))
+```
 
